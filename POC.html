@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Title of the document</title>
+    <script type="text/javascript">
+        document.addEventListener("DOMContentLoaded", start);
+
+        var ball;
+        var nY = 500;
+        var lowerLimit = 500;
+        var nX = 250;
+        var limitLeft = 50;
+        var limitRight = 800;
+        var speedX = 7;
+        var moveDirection = 1;
+        var frameReference;
+        var leftIsDown = false;
+        var rightIsDown = false;
+        var spaceIsDown = false;
+        var gravity = 3;
+        var speedY = 0;
+        //var friction = 0.5;
+        var goingDown = true;
+        var score = 0;
+        var scoreDiv;
+        var blueBallRadius = 50;
+
+
+        var repetitionForReward = 1;
+        var minInterval = 100;
+        var maxInterval = 2000;
+
+
+        var redBallX = 900;
+        var redBallY = 350;
+        var redBall;
+        var redBallRadius = 7;
+        var redBallSpeed = 9;
+        var redBallMoving = true;
+
+        var backgroundX = 0;
+        var backgroundSpeed = 2;
+        var background;
+
+        var noJumps = 0;
+        var noRedDiamonds = 0;
+        var scoreDivRed;
+
+
+        function start() {
+            background = document.getElementsByClassName("background")[0];
+            var dot = document.getElementById("dot");
+            dot.style.left = `${nX}px`;
+            dot.style.top = `${nY}px`;
+
+            window.addEventListener("keydown", ballKeyDown.bind(this));
+            window.addEventListener("keyup", ballKeyUp.bind(this));
+
+
+            createBalls();
+            createScore();
+            animateMove();
+        }
+
+        function createBalls() {
+            ball = document.getElementsByClassName("ball")[0];
+            ball.style.top = `${nY}px`;
+            ball.style.left = `${nX-50}px`;
+
+            redBall = document.getElementsByClassName("redBall")[0];
+            redBall.style.top = `${redBallY}px`;
+            redBall.style.left = `${redBallX}px`
+        }
+
+        function createScore() {
+            scoreDiv = document.getElementsByClassName("score")[0].getElementsByClassName("text")[0];
+            scoreDiv.innerHTML = score;
+
+            scoreDivRed = document.getElementsByClassName("score_red")[0].getElementsByClassName("text")[0];
+            scoreDivRed.innerHTML = noRedDiamonds;
+
+
+        }
+
+        function ballKeyUp(e) {
+            console.log("key up");
+            switch (e.code) {
+                // case "ArrowLeft":
+                //     leftIsDown = false;
+                //     break;
+                // case "ArrowRight":
+                //     rightIsDown = false;
+                //     break;
+                case "Space":
+                    spaceIsDown = false;
+                    break;
+            }
+        }
+
+        function ballKeyDown(e) {
+            console.log("down" + e.code);
+            switch (e.code) {
+                // case "ArrowLeft":
+                //     leftIsDown = true;
+                //     moveDirection = -1;
+                //     break;
+                // case "ArrowRight":
+                //     rightIsDown = true;
+                //     moveDirection = 1;
+                //     break;
+                case "Space":
+                    spaceIsDown = true;
+                    break;
+            }
+        }
+
+        function animateMove() {
+            frameReference = requestAnimationFrame(() => {
+                // if (leftIsDown || rightIsDown) {
+                //     nX += speedX * moveDirection;
+                //     if (nX > limitRight - 50) {
+                //         nX = limitRight - 50;
+                //     } else if (nX < limitLeft) {
+                //         nX = limitLeft;
+                //     }
+                //     ball.style.left = `${nX}px`;
+                // }
+                moveBackground();
+                moveBlueBall();
+                moveRedBall();
+                testHit();
+
+                animateMove();
+            });
+        }
+
+        function moveBackground() {
+            backgroundX -= backgroundSpeed;
+            if (backgroundX < -800) {
+                backgroundX = 0;
+            }
+            background.style.left = `${backgroundX}px`;
+        }
+
+        function testHit() {
+            var distance = Math.sqrt((redBallX - nX) * (redBallX - nX) + (redBallY - nY) * (redBallY - nY));
+            if (distance < blueBallRadius + redBallRadius) {
+                score++;
+                scoreDiv.innerHTML = score;
+                if (score % repetitionForReward == 0) {
+                    givePrize("diamond");
+                }
+
+                redBall.style.background = "yellow";
+                generateBall();
+                redBallX = -100;
+                redBallMoving = false;
+
+            }
+            // else {
+            //     redBall.style.background = "red";
+            // }
+
+        }
+
+        function givePrize(diamondClass) {
+            let prize = new Prize(diamondClass);
+            document.body.appendChild(prize.element);
+            prize.setPosition({ x: nX, y: nY - 20 });
+            setTimeout(() => {
+                prize.start();
+            }, 50)
+        }
+
+        function generateBall() {
+            setTimeout(() => {
+                redBallX = 900;
+                redBallMoving = true;
+            }, Math.round(Math.random() * maxInterval + minInterval))
+        }
+
+        function moveRedBall() {
+            redBallX -= redBallSpeed;
+            if (redBallX < -15 && redBallMoving) {
+                redBallMoving = false;
+                //redBallX = 900;
+                generateBall();
+            }
+            redBall.style.left = `${redBallX}px`;
+        }
+ 
+        function moveBlueBall() {
+            speedY += gravity;
+            nY += speedY;
+            if (speedY > 0 && !goingDown) {
+                goingDown = true;
+                if (noJumps % 3 == 0) {
+                    givePrize("diamondred");
+                    noRedDiamonds++;
+                    scoreDivRed.innerHTML = noRedDiamonds;
+                }
+            }
+            if (nY > lowerLimit) {
+                nY = lowerLimit;
+                speedY = 0;
+            }
+            if (spaceIsDown && nY == lowerLimit) {
+                noJumps++;
+
+
+
+                speedY = -30;
+                goingDown = false;
+            }
+            ball.style.top = `${nY - 50}px`;
+        }
+
+        function Prize(diamondClass) {
+            this.element = document.createElement("div");
+            this.element.className = diamondClass;
+            this.element.style.width = "50px";
+            this.element.style.height = "50px";
+        }
+
+        Prize.prototype = {
+            start: function () {
+                this.element.classList.add("diamond-animate");
+                setTimeout(() => {
+                    this.element.style.width = "150px";
+                    this.element.style.height = "150px";
+                    this.element.style.opacity = .2;
+                }, 0);
+                setTimeout(() => {
+                    this.element.remove();
+                }, 320);
+            },
+
+            setPosition: function (positionObject) {
+                this.element.style.left = `${positionObject.x}px`;
+                this.element.style.top = `${positionObject.y}px`;
+            }
+        }
+
+    </script>
+
+    <style>
+        @-webkit-keyframes rotating
+
+        /* Safari and Chrome */
+            {
+            from {
+                -webkit-transform: rotate(0deg);
+                -o-transform: rotate(0deg);
+                transform: rotate(0deg);
+            }
+
+            to {
+                -webkit-transform: rotate(360deg);
+                -o-transform: rotate(360deg);
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes rotating {
+            from {
+                -ms-transform: rotate(0deg);
+                -moz-transform: rotate(0deg);
+                -webkit-transform: rotate(0deg);
+                -o-transform: rotate(0deg);
+                transform: rotate(0deg);
+            }
+
+            to {
+                -ms-transform: rotate(360deg);
+                -moz-transform: rotate(360deg);
+                -webkit-transform: rotate(360deg);
+                -o-transform: rotate(360deg);
+                transform: rotate(360deg);
+            }
+        }
+
+        .rotating {
+            -webkit-animation: rotating 2s linear infinite;
+            -moz-animation: rotating 2s linear infinite;
+            -ms-animation: rotating 2s linear infinite;
+            -o-animation: rotating 2s linear infinite;
+            animation: rotating 2s linear infinite;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        .ball {
+            width: 100px;
+            height: 100px;
+            /* transform: translate3D(-50%, -50%, 0); */
+            position: absolute;
+            display: inline-block;
+            background: blue;
+            border-radius: 50%;
+            /* margin-left: -50%; */
+            /* margin-top: -50%; */
+            /* transform-origin:; */
+        }
+
+        .diamond {
+            width: 10px;
+            height: 10px;
+            position: absolute;
+            display: inline-block;
+            background: url("diamond.svg");
+            transform: translate3D(-50%, -50%, 0);
+
+        }
+
+        .diamondred {
+            width: 10px;
+            height: 10px;
+            position: absolute;
+            display: inline-block;
+            background: url("diamondred.svg");
+            transform: translate3D(-50%, -50%, 0);
+
+        }
+
+        .diamond-animate {
+            transition: all .3s;
+        }
+
+        .score {
+            position: absolute;
+            left: 5px;
+        }
+
+        .score>.icon {
+            display: inline-block;
+            background: url("diamond.svg");
+            width: 20px;
+            height: 20px;
+
+        }
+
+        .score>.text {
+            font-weight: bold;
+            font-size: 20px;
+            font-family: Verdana, Geneva, Tahoma, sans-serif;
+        }
+
+        .score_red {
+            position: absolute;
+            top: 30px;
+            left: 5px;
+        }
+
+        .score_red>.icon {
+            display: inline-block;
+            background: url("diamondred.svg");
+            width: 20px;
+            height: 20px;
+
+        }
+
+        .score_red>.text {
+            font-weight: bold;
+            font-size: 20px;
+            font-family: Verdana, Geneva, Tahoma, sans-serif;
+        }
+
+        .play-area {
+            position: absolute;
+            width: 800px;
+            height: 550px;
+            border: 1px solid black;
+            overflow: hidden;
+        }
+
+        .redBall {
+            position: absolute;
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            background: yellow;
+            border-radius: 50%;
+            transform: translate3D(-50%, -50%, 0);
+        }
+
+        .background {
+            /* max-width: 100%; */
+            display: inline-block;
+            position: absolute;
+            width: 800px;
+            height: 550px;
+            font-size: 0;
+            white-space: nowrap;
+        }
+
+        img {
+            max-width: 100%;
+            display: inline-block;
+        }
+
+        .whiteBall {
+            display: inline-block;
+            width: 5px;
+            height: 5px;
+            background: white;
+            margin-top: 20px;
+            margin-left: 20px;
+            border-radius: 50%;
+        }
+
+        #dot {
+            position: absolute;
+            background: red;
+            display: inline-block;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+
+<body>  
+    <div class="play-area">
+
+        <div class="background">
+            <img src="background1.png">
+            <img src="background1.png">
+        </div>
+        <div class="ball rotating">
+            <span class="whiteBall"></span>
+        </div>
+        <div class="redBall"></div>
+        <span id="dot"></span>
+    </div>
+
+
+    <div class="score">
+        <span class="icon"></span>
+        <span class="text"></span>
+    </div>
+
+    <div class="score_red">
+        <span class="icon"></span>
+        <span class="text"></span>
+    </div>
+</body>
+
+</html>
